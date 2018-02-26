@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mesitis-user
+  namespace: provider-ns
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mesitis-role
+rules:
+- apiGroups: ["","extensions", "apps"]
+  resources: ["deployments","services","pods","replicasets","secrets","configmaps","deployments.apps"]
+  verbs: ["get", "create", "delete","list"]

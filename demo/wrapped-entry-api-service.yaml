@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wrapped-entry-api-api-service
+  labels:
+    mesitis/kind: "catalog-entry"
+    mesitis/enabled: "true"
+data:
+  wrapped-resource: |
+    {
+        "team": "api",
+        "offering": "api-service",
+        "description":"An api service offered by the API team",
+        "uuid":"3",
+        "version":"1",
+        "whitelist": ["client-ns"],
+        "provisionkind": "ProvisionNewClusterObjects",
+        "provisiondata": {
+            "namespace": "provider-ns",
+            "name": "api-service",
+            "labelSelector":"mesitis/offering=api-service",
+        },
+        "credentialkind": "CredentialFromCatalog",
+        "credentialdata": {
+            "username":"iamtheuser",
+            "password":"iamthepassword"
+        }
+    }

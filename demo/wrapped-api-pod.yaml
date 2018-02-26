@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wrapped-api-pod
+  labels:
+    mesitis/offering: "api-service"
+    mesitis/kind: "wrapped-pod"
+    mesitis/enabled: "false"
+    mesitis/order: "1"
+data:
+  wrapped-resource: |
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "name": "back-end",
+        "labels": {
+          "app": "back-end"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "service",
+            "image": "localhost:5000/jbenton/service:003",
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "50Mi"
+              }
+            },
+            "env": [
+              {
+                "name": "PORT",
+                "value": ":9000"
+              },
+              {
+                "name": "TIME_SERVER",
+                "value": ""
+              }
+            ],
+            "ports": [
+              {
+                "name": "service",
+                "containerPort": 9000,
+                "hostPort": 9000
+              }
+            ],
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": 9000
+              },
+              "initialDelaySeconds": 3,
+              "periodSeconds": 3
+            }
+          }
+        ]
+      }
+    }

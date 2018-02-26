@@ -1,0 +1,4 @@
+apiVersion: v1
+name: mesitis
+description: Mesitis is an experimental Service Broker for the Kubernetes Service Catalog platform. According to Greek friends, Mesitis means agent/middleman/broker.
+version: 0.0.1

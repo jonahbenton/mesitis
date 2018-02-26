@@ -1,0 +1,17 @@
+# Image to use
+image: localhost:5000/jonahbenton/mesitis:latest
+# ImagePullPolicy; valid values are "IfNotPresent", "Never", and "Always"
+imagePullPolicy: Always
+# Certificate details to use for TLS. Leave blank to not use TLS
+tls:
+  # base-64 encoded PEM data for the TLS certificate
+  cert:
+  # base-64 encoded PEM data for the private key matching the certificate
+  key:
+listenOn: :8080
+serviceAccountName: mesitis-user
+storageType: memory
+#storageRedisAddress: redis-redis.redis-ns.svc.cluster.local:6379
+#storageRedisPassword: ""
+#storageRedisDatabase: 0
+
