@@ -4,7 +4,7 @@
 
 ### Introduction
 
-Mesitis is a configuration-driven, team-oriented Service Broker for Kubernetes, built on the [Service Catalog](https://github.com/kubernetes-incubator/service-catalog) platform (currently in kubernetes-incubator).
+Mesitis (Greek for `broker`) is a configuration-driven, team-oriented Service Broker for Kubernetes, built on the [Service Catalog](https://github.com/kubernetes-incubator/service-catalog) platform (currently in kubernetes-incubator).
 
 Mesitis is also an experiment in seeing the Service Catalog platform as an *engagement protocol for teams within an org*, rather than an *integration protocol for services outside an org*. 
 

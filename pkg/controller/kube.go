@@ -351,6 +351,7 @@ func (p ProvisionNonClusterURL) Provision(entry *Entry, id string, kube Kube, na
 	return &instance, nil
 }
 
+// TODO rename to InOrder
 type ByOrder []v1.ConfigMap
 
 func (a ByOrder) Len() int      { return len(a) }
