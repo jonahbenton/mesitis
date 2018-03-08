@@ -25,6 +25,7 @@ type ProductionController struct {
 	rwMutex   sync.RWMutex
 	Storage   Storage
 	Kube      Kube
+	Tmpdir    string
 }
 
 type ControllerOptions struct {
@@ -36,12 +37,13 @@ type ControllerOptions struct {
 	Namespace            string
 }
 
-func CreateProductionController(name, namespace string, storage Storage) Controller {
+func CreateProductionController(name, namespace string, storage Storage, tmpdir string) Controller {
 
 	return &ProductionController{
 		Namespace: namespace,
 		Kube:      &RealKube{},
 		Storage:   storage,
+		Tmpdir:    tmpdir,
 	}
 }
 

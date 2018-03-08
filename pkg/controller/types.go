@@ -69,6 +69,10 @@ type ProvisionNewClusterObjects struct {
 	LabelSelector string `json:"labelselector"`
 }
 
+// Provision the chart specified in the struct below via the registry
+type ProvisionHelmChart struct {
+}
+
 // Credential lives in a Secret in the broker namespace
 type CredentialFromClusterSecret struct {
 	SecretName string `json:"secretname"`
