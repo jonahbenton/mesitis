@@ -11,7 +11,6 @@ package chartdl
 import (
 	"archive/tar"
 	"compress/gzip"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"

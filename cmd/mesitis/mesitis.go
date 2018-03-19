@@ -59,7 +59,7 @@ func main() {
 
 	name := getEnv("POD_NAME", "UNKNOWN")
 	namespace := getEnv("POD_NAMESPACE", "UNKNOWN")
-	tmpdir := getEnv("TMPDIR", "/tmp")
+	tmpdir := getEnv("TMPDIR", "/unknown")
 
 	c := controller.CreateProductionController(name, namespace, storage, tmpdir)
 

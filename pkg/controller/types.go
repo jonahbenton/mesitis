@@ -71,6 +71,7 @@ type ProvisionNewClusterObjects struct {
 
 // Provision the chart specified in the struct below via the registry
 type ProvisionHelmChart struct {
+	URL string `json:"url"`
 }
 
 // Credential lives in a Secret in the broker namespace

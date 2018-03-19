@@ -38,6 +38,8 @@ spec:
           value: "{{ .Values.storageRedisDatabase }}"
         - name: CATALOG_LABEL
           value: mesitis/kind=catalog-entry
+        - name: TMPDIR
+          value: "{{ .Values.tmpdir }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:

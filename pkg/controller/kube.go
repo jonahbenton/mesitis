@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/jonahbenton/mesitis/pkg/chartdl"
 )
 
 // TODO is it necessary to have these distinct create functions?
@@ -36,7 +38,9 @@ type Kube interface {
 	GetSecret(namespace, name string) (*v1.Secret, error)
 }
 
-type RealKube struct{}
+type RealKube struct {
+	Tmpdir string
+}
 
 type Provision interface {
 	Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error)
@@ -348,6 +352,21 @@ func (p ProvisionNonClusterURL) Provision(entry *Entry, id string, kube Kube, na
 	URL := p.URL
 	instance := Instance{entry, id, "CoordinatesExternalURL", json.RawMessage{},
 		&CoordinatesExternalURL{URL: URL}, "ResourcesNoResource", json.RawMessage{}, nil}
+	return &instance, nil
+}
+
+func (p ProvisionHelmChart) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
+
+	URL := p.URL
+	destdir := kube.(*RealKube).Tmpdir
+	tarroot, err := chartdl.DownloadChart(destdir, URL)
+	if err == nil {
+		glog.Infof("Chart at URL <%s> downloaded to <%s>", URL, tarroot)
+	} else {
+		glog.Infof("Chart at URL <%s> download failed <%s>", URL, err)
+	}
+	instance := Instance{entry, id, "CoordinatesClusterURL", json.RawMessage{},
+		&CoordinatesExternalURL{URL: "http://dummy.default.svc.cluster.local"}, "ResourcesNoResource", json.RawMessage{}, nil}
 	return &instance, nil
 }
 

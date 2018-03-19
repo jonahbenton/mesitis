@@ -140,6 +140,13 @@ func (entry *Entry) PostUnmarshal() error {
 			return err
 		}
 		entry.ProvisionObj = p
+	case "ProvisionHelmChart":
+		var p ProvisionHelmChart
+		if err := json.Unmarshal([]byte(entry.ProvisionData), &p); err != nil {
+			glog.Errorf("Failed to unmarshal ProvisionObj: %s", err)
+			return err
+		}
+		entry.ProvisionObj = p
 	default:
 		glog.Errorln("Unknown ProvisionKind")
 		return errors.New("Unknown ProvisionKind")

@@ -21,6 +21,7 @@ type ControllerHTTPWrapper struct {
 // TODO use this to eliminate the trace log in each dispatcher call
 func headerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		glog.Infof("M: %q\n", r.Method)
 		glog.Infof("U: %q\n", r.RequestURI)
 		for k, v := range r.Header {
 			glog.Infof("H: %q: %q\n", k, v)

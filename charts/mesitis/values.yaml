@@ -14,4 +14,4 @@ storageType: memory
 #storageRedisAddress: redis-redis.redis-ns.svc.cluster.local:6379
 #storageRedisPassword: ""
 #storageRedisDatabase: 0
-
+tmpdir: /tmp

@@ -25,7 +25,6 @@ type ProductionController struct {
 	rwMutex   sync.RWMutex
 	Storage   Storage
 	Kube      Kube
-	Tmpdir    string
 }
 
 type ControllerOptions struct {
@@ -41,9 +40,8 @@ func CreateProductionController(name, namespace string, storage Storage, tmpdir 
 
 	return &ProductionController{
 		Namespace: namespace,
-		Kube:      &RealKube{},
+		Kube:      &RealKube{Tmpdir: tmpdir},
 		Storage:   storage,
-		Tmpdir:    tmpdir,
 	}
 }
 
@@ -177,6 +175,8 @@ func (c *ProductionController) CreateServiceInstance(id string, req *brokerapi.C
 		instance, err = entry.ProvisionObj.(ProvisionExistingClusterService).Provision(entry, id, c.Kube, c.Namespace)
 	case ProvisionNewClusterObjects:
 		instance, err = entry.ProvisionObj.(ProvisionNewClusterObjects).Provision(entry, id, c.Kube, c.Namespace)
+	case ProvisionHelmChart:
+		instance, err = entry.ProvisionObj.(ProvisionHelmChart).Provision(entry, id, c.Kube, c.Namespace)
 	default:
 		// TODO make same error message
 		glog.Errorln("Unknown provision type")
