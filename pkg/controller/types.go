@@ -2,40 +2,34 @@ package controller
 
 import (
 	"fmt"
-	"reflect"
-
-	"encoding/json"
 
 	"github.com/kubernetes-incubator/service-catalog/contrib/pkg/brokerapi"
 )
 
-// TODO make a const enum type for provision kind and credential kind
+// An entry embedded in a kubernetes secret or configmap
 type Entry struct {
-	Team           string          `json:"team"`
-	Offering       string          `json:"offering"`
-	Description    string          `json:"description"`
-	UUID           string          `json:"uuid"`
-	Version        string          `json:"version"`
-	Whitelist      []string        `json:"whitelist"`
-	ProvisionKind  string          `json:"provisionkind"`
-	ProvisionData  json.RawMessage `json:"provisiondata"`
-	ProvisionObj   interface{}
-	CredentialKind string          `json:"credentialkind"`
-	CredentialData json.RawMessage `json:"credentialdata"`
-	CredentialObj  interface{}
+	Team                            string                           `json:"team"`
+	Offering                        string                           `json:"offering"`
+	Description                     string                           `json:"description"`
+	UUID                            string                           `json:"uuid"`
+	Version                         string                           `json:"version"`
+	Whitelist                       []string                         `json:"whitelist"`
+	ProvisionExistingClusterService *ProvisionExistingClusterService `json:"ProvisionExistingClusterService"`
+	ProvisionNonClusterURL          *ProvisionNonClusterURL          `json:"ProvisionNonClusterURL"`
+	ProvisionNewClusterObjects      *ProvisionNewClusterObjects      `json:"ProvisionNewClusterObjects"`
+	ProvisionHelmChart              *ProvisionHelmChart              `json:"ProvisionHelmChart"`
+	CredentialFromClusterSecret     *CredentialFromClusterSecret     `json:"CredentialFromClusterSecret"`
+	CredentialFromCatalog           *CredentialFromCatalog           `json:"CredentialFromCatalog"`
+	CredentialFromVault             *CredentialFromVault             `json:"CredentialFromVault"`
 }
 
-type Entries []Entry
-
 type Instance struct {
-	*Entry
-	InstanceID      string          `json:"instanceID"`
-	CoordinatesKind string          `json:"coordinateskind"`
-	CoordinatesData json.RawMessage `json:"coordinatesdata"`
-	CoordinatesObj  interface{}
-	ResourcesKind   string          `json:"resourceskind"`
-	ResourcesData   json.RawMessage `json:"resourcesdata"`
-	ResourcesObj    interface{}
+	Entry
+	InstanceID              string                   `json:"instanceID"`
+	CoordinatesExternalURL  *CoordinatesExternalURL  `json:"CoordinatesExternalURL"`
+	CoordinatesClusterURL   *CoordinatesClusterURL   `json:"CoordinatesClusterURL"`
+	ResourcesNoResource     *ResourcesNoResource     `json:"ResourcesNoResource"`
+	ResourcesKubeObjectList *ResourcesKubeObjectList `json:"ResourcesKubeObjectList"`
 }
 
 type Binding struct {
@@ -146,12 +140,10 @@ func (p *ProvisionNewClusterObjects) String() string {
 }
 
 func (c *Entry) String() string {
-	return fmt.Sprintf("{Entry: Team: %s, Offering: %s, Version: %s, ProvObj: %s, CredObj: %s}",
-		c.Team, c.Offering, c.Version, reflect.TypeOf(c.ProvisionObj).String(), reflect.TypeOf(c.CredentialObj).String())
+	return fmt.Sprintf("{Entry: Team: %s, Offering: %s, Version: %s}",
+		c.Team, c.Offering, c.Version)
 }
 
 func (p *Instance) String() string {
-	return fmt.Sprintf("{Instance: %s, %s, %s, %s}",
-		reflect.TypeOf(p.ProvisionObj).String(), reflect.TypeOf(p.CredentialObj).String(),
-		reflect.TypeOf(p.ResourcesObj).String(), reflect.TypeOf(p.CoordinatesObj).String())
+	return fmt.Sprintf("{Instance}")
 }

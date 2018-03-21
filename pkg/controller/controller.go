@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"reflect"
 	"sync"
 
 	"github.com/golang/glog"
@@ -54,7 +53,7 @@ func (c *ProductionController) Catalog() (*brokerapi.Catalog, error) {
 	var catalog *[]Entry
 	var err error
 
-	if catalog, err = LoadCatalogFromConfigMaps(&RealKube{}, c.Namespace); err != nil {
+	if catalog, err = LoadCatalogFromConfigMaps(c.Kube, c.Namespace); err != nil {
 		glog.Errorf("Failed to load catalog: %s", err)
 		return &brokerapi.Catalog{}, nil
 	}
@@ -118,7 +117,7 @@ func (c *ProductionController) CreateServiceInstance(id string, req *brokerapi.C
 	var catalog *[]Entry
 	var err error
 
-	if catalog, err = LoadCatalogFromConfigMaps(&RealKube{}, c.Namespace); err != nil {
+	if catalog, err = LoadCatalogFromConfigMaps(c.Kube, c.Namespace); err != nil {
 		glog.Errorf("Failed to load catalog: %s", err)
 		return nil, err
 	}
@@ -147,8 +146,6 @@ func (c *ProductionController) CreateServiceInstance(id string, req *brokerapi.C
 
 	// TODO debug
 	glog.Infof("Found matching catalog entry: %s", entry.String())
-	glog.Infof("Entry.ProvisionObj: %s", reflect.TypeOf(entry.ProvisionObj).String())
-	glog.Infof("Entry.CredentialObj: %s", reflect.TypeOf(entry.CredentialObj).String())
 
 	// does the calling namespace exist in the whitelist for the given service and plan.
 	// if no, return error
@@ -168,20 +165,8 @@ func (c *ProductionController) CreateServiceInstance(id string, req *brokerapi.C
 
 	var instance *Instance
 
-	switch entry.ProvisionObj.(type) {
-	case ProvisionNonClusterURL:
-		instance, err = entry.ProvisionObj.(ProvisionNonClusterURL).Provision(entry, id, c.Kube, c.Namespace)
-	case ProvisionExistingClusterService:
-		instance, err = entry.ProvisionObj.(ProvisionExistingClusterService).Provision(entry, id, c.Kube, c.Namespace)
-	case ProvisionNewClusterObjects:
-		instance, err = entry.ProvisionObj.(ProvisionNewClusterObjects).Provision(entry, id, c.Kube, c.Namespace)
-	case ProvisionHelmChart:
-		instance, err = entry.ProvisionObj.(ProvisionHelmChart).Provision(entry, id, c.Kube, c.Namespace)
-	default:
-		// TODO make same error message
-		glog.Errorln("Unknown provision type")
-		return nil, errors.New("Failed to provision")
-	}
+	instance, err = entry.Provision(c.Kube, c.Namespace, id)
+
 	if err != nil {
 		glog.Errorf("Provisioning failed %s: %s", id, err)
 		return nil, err
@@ -208,38 +193,9 @@ func (c *ProductionController) RemoveServiceInstance(instanceID, serviceID, plan
 	defer c.rwMutex.Unlock()
 
 	// if the instance exists, delete any provisioned resources
-	pr, err := LoadInstance(c.Storage, instanceID)
+	instance, err := LoadInstance(c.Storage, instanceID)
 	if err == nil {
-		switch pr.ResourcesObj.(type) {
-		case ResourcesKubeObjectList:
-			glog.Infof("Resources associated with this ID are: %s", pr.String())
-			// reverse order
-			// TODO update and save after each deprovision? probably not necessary
-			for i := len(pr.ResourcesObj.(ResourcesKubeObjectList)) - 1; i >= 0; i-- {
-				po := pr.ResourcesObj.(ResourcesKubeObjectList)[i]
-				switch po.Kind {
-				case "wrapped-pod":
-					err = c.Kube.DeletePod(po.Namespace, po.Name)
-				case "wrapped-deployment":
-					err = c.Kube.DeleteDeployment(po.Namespace, po.Name)
-				case "wrapped-service":
-					err = c.Kube.DeleteService(po.Namespace, po.Name)
-				case "wrapped-configmap":
-					err = c.Kube.DeleteConfigMap(po.Namespace, po.Name)
-				case "wrapped-secret":
-					err = c.Kube.DeleteSecret(po.Namespace, po.Name)
-				default:
-					glog.Errorf("Unable to delete provisioned object kind: %s", po.Kind)
-				}
-				if err != nil {
-					glog.Errorf("Failed to delete provisioned object: %s", err)
-				}
-			}
-		case ResourcesNoResource:
-			// nothing to do
-		default:
-			// nothing to do
-		}
+		instance.Deprovision(c.Kube)
 	} else {
 		glog.Errorf("Unable to find provisioned objects!")
 	}
@@ -296,47 +252,53 @@ func (c *ProductionController) Bind(instanceID, bindingID string, req *brokerapi
 
 	var cred brokerapi.Credential
 
+	// TODO merge maps from coordinates and credentials
+	cred = brokerapi.Credential{
+		"URL": "TBD",
+	}
+
 	// TODO coordinates needs to be included in the Credential
 	// TODO needs to support port and protocol, etc
-	var URL string
 
-	switch instance.CoordinatesObj.(type) {
-	case CoordinatesClusterURL:
-		URL = instance.CoordinatesObj.(CoordinatesClusterURL).URL
-	case CoordinatesExternalURL:
-		URL = instance.CoordinatesObj.(CoordinatesExternalURL).URL
-	default:
-		glog.Errorf("Unrecognized CoordinatesObj type: %s", reflect.TypeOf(instance.CoordinatesObj).String())
-	}
+	//	var URL string
 
-	// TODO serialization mechanism to not write passwords to logs
+	//	switch instance.CoordinatesObj.(type) {
+	//	case CoordinatesClusterURL:
+	//		URL = instance.CoordinatesObj.(CoordinatesClusterURL).URL
+	//	case CoordinatesExternalURL:
+	//		URL = instance.CoordinatesObj.(CoordinatesExternalURL).URL
+	//	default:
+	//		glog.Errorf("Unrecognized CoordinatesObj type: %s", reflect.TypeOf(instance.CoordinatesObj).String())
+	//	}
 
-	switch instance.Entry.CredentialObj.(type) {
-	case CredentialFromCatalog:
-		cred = brokerapi.Credential{
-			"URL":      URL,
-			"Username": instance.Entry.CredentialObj.(CredentialFromCatalog).Username,
-			"Password": instance.Entry.CredentialObj.(CredentialFromCatalog).Password,
-		}
-	case CredentialFromClusterSecret:
-		name := instance.Entry.CredentialObj.(CredentialFromClusterSecret).SecretName
-		secret, err := c.Kube.GetSecret(c.Namespace, name)
-		if err == nil {
-			cred = brokerapi.Credential{}
-			for key, value := range secret.Data {
-				cred[key] = value
-			}
-		} else {
-			glog.Errorf("Unable to find secret %s for CredentialFromClusterSecret for binding %s", name, bindingID)
-			return nil, err
-		}
-	case CredentialNoCredential:
-		cred = brokerapi.Credential{
-			"URL": URL,
-		}
-	default:
-		return nil, errors.New("Unknown credential type.")
-	}
+	//	// TODO serialization mechanism to not write passwords to logs
+
+	//	switch instance.Entry.CredentialObj.(type) {
+	//	case CredentialFromCatalog:
+	//		cred = brokerapi.Credential{
+	//			"URL":      URL,
+	//			"Username": instance.Entry.CredentialObj.(CredentialFromCatalog).Username,
+	//			"Password": instance.Entry.CredentialObj.(CredentialFromCatalog).Password,
+	//		}
+	//	case CredentialFromClusterSecret:
+	//		name := instance.Entry.CredentialObj.(CredentialFromClusterSecret).SecretName
+	//		secret, err := c.Kube.GetSecret(c.Namespace, name)
+	//		if err == nil {
+	//			cred = brokerapi.Credential{}
+	//			for key, value := range secret.Data {
+	//				cred[key] = value
+	//			}
+	//		} else {
+	//			glog.Errorf("Unable to find secret %s for CredentialFromClusterSecret for binding %s", name, bindingID)
+	//			return nil, err
+	//		}
+	//	case CredentialNoCredential:
+	//		cred = brokerapi.Credential{
+	//			"URL": URL,
+	//		}
+	//	default:
+	//		return nil, errors.New("Unknown credential type.")
+	//	}
 
 	glog.Infof("Creating Binding: %s", bindingID)
 	binding := &Binding{instance, bindingID, cred}

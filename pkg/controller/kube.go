@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -317,17 +318,13 @@ func LoadCatalogFromConfigMaps(k Kube, namespace string) (*[]Entry, error) {
 		return nil, err
 	}
 
+	glog.Infof("Found <%d> entries.", len(list.Items))
 	for _, cm := range list.Items {
 		js := cm.Data[dataKey]
 
 		var entry *Entry
-		if err := json.Unmarshal([]byte(js), &entry); err == nil {
-			if err := entry.PostUnmarshal(); err != nil {
-				glog.Errorf("Failed at PostUnmarshal step for catalog entry: %s", err)
-				continue
-			}
-		} else {
-			glog.Errorf("Failed to unmarshal catalog data from ConfigMap: %s", err)
+		if err := json.Unmarshal([]byte(js), &entry); err != nil {
+			glog.Errorf("Failed to unmarshal catalog data <%s> from ConfigMap: %s", js, err)
 			continue
 		}
 		catalog = append(catalog, *entry)
@@ -340,18 +337,61 @@ func LoadCatalogFromConfigMaps(k Kube, namespace string) (*[]Entry, error) {
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
 
+func (instance *Instance) Deprovision(kube Kube) error {
+	var err error
+	if instance.ResourcesKubeObjectList != nil {
+		for i := len(*(*instance).ResourcesKubeObjectList) - 1; i >= 0; i-- {
+			po := (*(*instance).ResourcesKubeObjectList)[i]
+			switch po.Kind {
+			case "wrapped-pod":
+				err = kube.DeletePod(po.Namespace, po.Name)
+			case "wrapped-deployment":
+				err = kube.DeleteDeployment(po.Namespace, po.Name)
+			case "wrapped-service":
+				err = kube.DeleteService(po.Namespace, po.Name)
+			case "wrapped-configmap":
+				err = kube.DeleteConfigMap(po.Namespace, po.Name)
+			case "wrapped-secret":
+				err = kube.DeleteSecret(po.Namespace, po.Name)
+			default:
+				glog.Errorf("Unable to delete provisioned object kind: %s", po.Kind)
+			}
+			if err != nil {
+				glog.Errorf("Failed to delete provisioned object: %s", err)
+			}
+		}
+
+	} else if instance.ResourcesNoResource != nil {
+		// nothing to do
+	}
+	return nil
+}
+
+func (e *Entry) Provision(kube Kube, namespace string, id string) (*Instance, error) {
+	if e.ProvisionExistingClusterService != nil {
+		return e.ProvisionExistingClusterService.Provision(e, id, kube, namespace)
+	} else if e.ProvisionNonClusterURL != nil {
+		return e.ProvisionNonClusterURL.Provision(e, id, kube, namespace)
+	} else if e.ProvisionNewClusterObjects != nil {
+		return e.ProvisionNewClusterObjects.Provision(e, id, kube, namespace)
+	} else if e.ProvisionHelmChart != nil {
+		return e.ProvisionHelmChart.Provision(e, id, kube, namespace)
+	} else {
+		glog.Errorln("Missing provision type")
+		return nil, errors.New("Failed to provision")
+	}
+}
+
 func (p ProvisionExistingClusterService) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
 
-	instance := Instance{entry, id, "CoordinatesClusterURL", json.RawMessage{},
-		&CoordinatesClusterURL{URL: URL}, "ResourcesNoResource", json.RawMessage{}, nil}
+	instance := Instance{*entry, id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
 func (p ProvisionNonClusterURL) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
 	URL := p.URL
-	instance := Instance{entry, id, "CoordinatesExternalURL", json.RawMessage{},
-		&CoordinatesExternalURL{URL: URL}, "ResourcesNoResource", json.RawMessage{}, nil}
+	instance := Instance{*entry, id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
@@ -365,8 +405,7 @@ func (p ProvisionHelmChart) Provision(entry *Entry, id string, kube Kube, namesp
 	} else {
 		glog.Infof("Chart at URL <%s> download failed <%s>", URL, err)
 	}
-	instance := Instance{entry, id, "CoordinatesClusterURL", json.RawMessage{},
-		&CoordinatesExternalURL{URL: "http://dummy.default.svc.cluster.local"}, "ResourcesNoResource", json.RawMessage{}, nil}
+	instance := Instance{*entry, id, &CoordinatesExternalURL{URL: "http://dummy.default.svc.cluster.local"}, nil, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
@@ -383,7 +422,7 @@ func (p ProvisionNewClusterObjects) Provision(entry *Entry, id string, kube Kube
 
 	const dataKey = "wrapped-resource"
 
-	obj := entry.ProvisionObj.(ProvisionNewClusterObjects)
+	obj := entry.ProvisionNewClusterObjects
 
 	glog.Infof("Attempting to find config maps matching labelselector: %s\n", obj.LabelSelector)
 	list, err := kube.ListConfigMaps(namespace, obj.LabelSelector)
@@ -482,8 +521,7 @@ func (p ProvisionNewClusterObjects) Provision(entry *Entry, id string, kube Kube
 	}
 
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
-	instance := Instance{entry, id, "CoordinatesClusterURL", json.RawMessage{},
-		CoordinatesClusterURL{URL: URL}, "ResourcesKubeObjectList", json.RawMessage{}, pcfo}
+	instance := Instance{*entry, id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo}
 
 	return &instance, nil
 }
