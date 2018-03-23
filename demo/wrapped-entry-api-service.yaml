@@ -14,14 +14,12 @@ data:
         "uuid":"3",
         "version":"1",
         "whitelist": ["client-ns"],
-        "provisionkind": "ProvisionNewClusterObjects",
-        "provisiondata": {
+        "provisionnewclusterobjects": {
             "namespace": "provider-ns",
             "name": "api-service",
             "labelSelector":"mesitis/offering=api-service"
         },
-        "credentialkind": "CredentialFromCatalog",
-        "credentialdata": {
+        "credentialfromcatalog": {
             "username":"iamtheuser",
             "password":"iamthepassword"
         }
