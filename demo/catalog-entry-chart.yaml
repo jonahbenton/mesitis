@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wrapped-entry-api-api-service
+  name: catalog-entry-chart
   labels:
     mesitis/kind: "catalog-entry"
     mesitis/enabled: "true"
@@ -9,15 +9,13 @@ data:
   wrapped-resource: |
     {
         "team": "api",
-        "offering": "api-service",
-        "description":"An api service offered by the API team",
-        "uuid":"3",
+        "offering": "time-service",
+        "description":"A time service available through a helm chart registry, offered by the API team",
+        "uuid":"4",
         "version":"1",
         "whitelist": ["client-ns"],
-        "provisionnewclusterobjects": {
-            "namespace": "provider-ns",
-            "name": "api-service",
-            "labelSelector":"mesitis/offering=api-service"
+        "provisionhelmchart": {
+            "url": "http://nginx-chart-registry.default.svc.cluster.local/charts/trivial-time-service-0.1.0.tgz"
         },
         "credentialfromcatalog": {
             "username":"iamtheuser",
