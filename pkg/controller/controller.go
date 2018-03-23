@@ -246,11 +246,16 @@ func (c *ProductionController) Bind(instanceID, bindingID string, req *brokerapi
 
 	// TODO debug
 	glog.Infof("Retrieved instance to bind:", instance.String())
-	//glog.Infof("Retrieved entry from instance:", instance.Entry.String())
+	glog.Infof("Retrieved entry from instance:", instance.Entry.String())
 
 	var cred brokerapi.Credential
 
 	// TODO merge maps from coordinates and credentials
+	// first call RetrieveCredential() from the entry. this returns a map[string]string
+	// second use https://github.com/fatih/structs to turn instance.coordinates into map[string]string
+	// third merge the two maps
+	// fourth assign brokerapi.Credential to this map
+
 	cred = brokerapi.Credential{
 		"URL": "TBD",
 	}

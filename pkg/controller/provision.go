@@ -11,10 +11,6 @@ import (
 	"github.com/jonahbenton/mesitis/pkg/chartdl"
 )
 
-type Provision interface {
-	Provision(kube Kube, namespace string, id string) (*Instance, error)
-}
-
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
@@ -56,35 +52,39 @@ func (instance *Instance) Deprovision(kube Kube) error {
 	return nil
 }
 
+type Provision interface {
+	Provision(kube Kube, id string, entry *Entry) (*Instance, error)
+}
+
 func (e *Entry) Provision(kube Kube, id string) (*Instance, error) {
 	if e.ProvisionExistingClusterService != nil {
-		return e.ProvisionExistingClusterService.Provision(kube, id)
+		return e.ProvisionExistingClusterService.Provision(kube, id, e)
 	} else if e.ProvisionNonClusterURL != nil {
-		return e.ProvisionNonClusterURL.Provision(kube, id)
+		return e.ProvisionNonClusterURL.Provision(kube, id, e)
 	} else if e.ProvisionNewClusterObjects != nil {
-		return e.ProvisionNewClusterObjects.Provision(kube, id)
+		return e.ProvisionNewClusterObjects.Provision(kube, id, e)
 	} else if e.ProvisionHelmChart != nil {
-		return e.ProvisionHelmChart.Provision(kube, id)
+		return e.ProvisionHelmChart.Provision(kube, id, e)
 	} else {
 		glog.Errorln("Missing provision type")
 		return nil, errors.New("Failed to provision")
 	}
 }
 
-func (p ProvisionExistingClusterService) Provision(kube Kube, id string) (*Instance, error) {
+func (p ProvisionExistingClusterService) Provision(kube Kube, id string, entry *Entry) (*Instance, error) {
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
 
-	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil, nil}
+	instance := Instance{*entry, id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil, nil}
 	return &instance, nil
 }
 
-func (p ProvisionNonClusterURL) Provision(kube Kube, id string) (*Instance, error) {
+func (p ProvisionNonClusterURL) Provision(kube Kube, id string, entry *Entry) (*Instance, error) {
 	URL := p.URL
-	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil, nil}
+	instance := Instance{*entry, id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil, nil}
 	return &instance, nil
 }
 
-func (p ProvisionHelmChart) Provision(kube Kube, id string) (*Instance, error) {
+func (p ProvisionHelmChart) Provision(kube Kube, id string, entry *Entry) (*Instance, error) {
 
 	chartURL := p.ChartURL
 	// TODO consider adding tillerHost to kube object, getting it from app configuration
@@ -108,7 +108,7 @@ func (p ProvisionHelmChart) Provision(kube Kube, id string) (*Instance, error) {
 	// _, err = helmClient.InstallRelease(tarroot, p.Namespace, helm.ReleaseName(name), helm.ValueOverrides(vals))
 
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
-	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, nil, nil, &ResourcesHelmRelease{Namespace: p.Namespace, Name: p.Name}}
+	instance := Instance{*entry, id, &CoordinatesExternalURL{URL: URL}, nil, nil, nil, &ResourcesHelmRelease{Namespace: p.Namespace, Name: p.Name}}
 	return &instance, nil
 }
 
@@ -121,7 +121,7 @@ func (a ByOrder) Less(i, j int) bool {
 	return a[i].ObjectMeta.Labels["mesitis/order"] < a[j].ObjectMeta.Labels["mesitis/order"]
 }
 
-func (p ProvisionNewClusterObjects) Provision(kube Kube, id string) (*Instance, error) {
+func (p ProvisionNewClusterObjects) Provision(kube Kube, id string, entry *Entry) (*Instance, error) {
 
 	// TODO consider checking whether a service with the given name exists in the namespace
 
@@ -226,7 +226,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, id string) (*Instance, 
 	}
 
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
-	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo, nil}
+	instance := Instance{*entry, id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo, nil}
 
 	return &instance, nil
 }

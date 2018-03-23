@@ -24,7 +24,7 @@ type Entry struct {
 }
 
 type Instance struct {
-	//Entry
+	Entry
 	InstanceID              string                   `json:"instanceID"`
 	CoordinatesExternalURL  *CoordinatesExternalURL  `json:"CoordinatesExternalURL"`
 	CoordinatesClusterURL   *CoordinatesClusterURL   `json:"CoordinatesClusterURL"`
