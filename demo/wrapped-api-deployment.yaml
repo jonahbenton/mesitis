@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wrapped-api-deployment
+  name: api-deployment-wrapper
   labels:
     mesitis/offering: "api-service"
-    mesitis/kind: "wrapped-deployment"
+    mesitis/kind: "deployment"
     mesitis/enabled: "true"
     mesitis/order: "2"
 data:
-  wrapped-resource: |
+  embedded-resource: |
     {
       "apiVersion": "extensions/v1beta1",
       "kind": "Deployment",

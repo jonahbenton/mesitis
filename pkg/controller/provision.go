@@ -102,7 +102,7 @@ func (a ByOrder) Less(i, j int) bool {
 
 func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id string) (*Instance, error) {
 
-	const dataKey = "wrapped-resource"
+	const dataKey = "embedded-resource"
 
 	obj := p
 
@@ -127,7 +127,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 		// behavior is identical
 		// TODO check if the object exists already in the namespace. if so, don't provision again.
 		switch cm.ObjectMeta.Labels["mesitis/kind"] {
-		case "wrapped-pod":
+		case "pod":
 			pod, cerr := kube.CreatePodFromJSON(obj.Namespace, cm.Data[dataKey])
 			if cerr == nil {
 				glog.Infof("Created pod: %s\n", pod)
@@ -141,7 +141,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 			} else {
 				kubeError(cerr)
 			}
-		case "wrapped-deployment":
+		case "deployment":
 			deployment, cerr := kube.CreateDeploymentFromJSON(obj.Namespace, cm.Data[dataKey])
 			if cerr == nil {
 				glog.Infof("Created deployment: %s\n", deployment)
@@ -155,7 +155,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				kubeError(cerr)
 			}
 
-		case "wrapped-service":
+		case "service":
 			service, cerr := kube.CreateServiceFromJSON(obj.Namespace, cm.Data[dataKey])
 			if cerr == nil {
 				glog.Errorf("Created service: %s\n", service)
@@ -169,7 +169,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				kubeError(cerr)
 			}
 
-		case "wrapped-configmap":
+		case "configmap":
 			configMap, cerr := kube.CreateConfigMapFromJSON(obj.Namespace, cm.Data[dataKey])
 			if cerr == nil {
 				glog.Errorf("Created ConfigMap: %s\n", configMap)
@@ -183,7 +183,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				kubeError(cerr)
 			}
 
-		case "wrapped-secret":
+		case "secret":
 			secret, cerr := kube.CreateSecretFromJSON(obj.Namespace, cm.Data[dataKey])
 			if cerr == nil {
 				glog.Errorf("Created secret: %s\n", secret)
