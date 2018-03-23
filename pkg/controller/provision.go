@@ -25,15 +25,15 @@ func (instance *Instance) Deprovision(kube Kube) error {
 		for i := len(*(*instance).ResourcesKubeObjectList) - 1; i >= 0; i-- {
 			po := (*(*instance).ResourcesKubeObjectList)[i]
 			switch po.Kind {
-			case "wrapped-pod":
+			case "pod":
 				err = kube.DeletePod(po.Namespace, po.Name)
-			case "wrapped-deployment":
+			case "deployment":
 				err = kube.DeleteDeployment(po.Namespace, po.Name)
-			case "wrapped-service":
+			case "service":
 				err = kube.DeleteService(po.Namespace, po.Name)
-			case "wrapped-configmap":
+			case "configmap":
 				err = kube.DeleteConfigMap(po.Namespace, po.Name)
-			case "wrapped-secret":
+			case "secret":
 				err = kube.DeleteSecret(po.Namespace, po.Name)
 			default:
 				glog.Errorf("Unable to delete provisioned object kind: %s", po.Kind)
@@ -133,7 +133,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				glog.Infof("Created pod: %s\n", pod)
 				pcfo = append(pcfo,
 					ResourcesKubeObject{
-						Kind:      "wrapped-pod",
+						Kind:      "pod",
 						Name:      pod.ObjectMeta.Name,
 						Namespace: obj.Namespace})
 
@@ -147,7 +147,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				glog.Infof("Created deployment: %s\n", deployment)
 				pcfo = append(pcfo,
 					ResourcesKubeObject{
-						Kind:      "wrapped-deployment",
+						Kind:      "deployment",
 						Name:      deployment.ObjectMeta.Name,
 						Namespace: obj.Namespace})
 				glog.Infof("Resources: %s\n", pcfo)
@@ -161,7 +161,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				glog.Errorf("Created service: %s\n", service)
 				pcfo = append(pcfo,
 					ResourcesKubeObject{
-						Kind:      "wrapped-service",
+						Kind:      "service",
 						Name:      service.ObjectMeta.Name,
 						Namespace: obj.Namespace})
 				glog.Infof("Resources: %s\n", pcfo)
@@ -175,7 +175,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				glog.Errorf("Created ConfigMap: %s\n", configMap)
 				pcfo = append(pcfo,
 					ResourcesKubeObject{
-						Kind:      "wrapped-configmap",
+						Kind:      "configmap",
 						Name:      configMap.ObjectMeta.Name,
 						Namespace: obj.Namespace})
 				glog.Infof("Resources: %s\n", pcfo)
@@ -189,7 +189,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id st
 				glog.Errorf("Created secret: %s\n", secret)
 				pcfo = append(pcfo,
 					ResourcesKubeObject{
-						Kind:      "wrapped-secret",
+						Kind:      "secret",
 						Name:      secret.ObjectMeta.Name,
 						Namespace: obj.Namespace})
 				glog.Infof("Resources: %s\n", pcfo)
