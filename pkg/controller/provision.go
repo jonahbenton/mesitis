@@ -45,6 +45,13 @@ func (instance *Instance) Deprovision(kube Kube) error {
 
 	} else if instance.ResourcesNoResource != nil {
 		// nothing to do
+	} else if instance.ResourcesHelmRelease != nil {
+
+		// tillerHost := "tiller-deploy.kube-system.svc.cluster.local:44134"
+		// helmClient := helm.NewClient(helm.Host(tillerHost))
+		// if _, err := helmClient.DeleteRelease(instance.ResourcesHelmRelease.Name); err != nil {
+		// return err
+		// }
 	}
 	return nil
 }
@@ -67,27 +74,41 @@ func (e *Entry) Provision(kube Kube, id string) (*Instance, error) {
 func (p ProvisionExistingClusterService) Provision(kube Kube, id string) (*Instance, error) {
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
 
-	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil}
+	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil, nil}
 	return &instance, nil
 }
 
 func (p ProvisionNonClusterURL) Provision(kube Kube, id string) (*Instance, error) {
 	URL := p.URL
-	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil}
+	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil, nil}
 	return &instance, nil
 }
 
 func (p ProvisionHelmChart) Provision(kube Kube, id string) (*Instance, error) {
 
-	URL := p.URL
+	chartURL := p.ChartURL
+	// TODO consider adding tillerHost to kube object, getting it from app configuration
+	// tillerHost := "tiller-deploy.kube-system.svc.cluster.local:44134"
+
+	// TODO consider checking whether the release name exists in the namespace already first
+
 	destdir := kube.(*RealKube).Tmpdir
-	tarroot, err := chartdl.DownloadChart(destdir, URL)
+	tarroot, err := chartdl.DownloadChart(destdir, chartURL)
 	if err == nil {
-		glog.Infof("Chart at URL <%s> downloaded to <%s>", URL, tarroot)
+		glog.Infof("Chart at URL <%s> downloaded to <%s>", chartURL, tarroot)
 	} else {
-		glog.Infof("Chart at URL <%s> download failed <%s>", URL, err)
+		glog.Infof("Chart at URL <%s> download failed <%s>", chartURL, err)
 	}
-	instance := Instance{id, &CoordinatesExternalURL{URL: "http://dummy.default.svc.cluster.local"}, nil, &ResourcesNoResource{}, nil}
+	// TODO install chart in p.Namespace
+	// 	vals, err := yaml.Marshal(map[string]interface{}{
+	//	"mariadbRootPassword": uniuri.New(),
+	//  "mariadbDatabase":     "dbname",
+	// })
+	// 	helmClient := helm.NewClient(helm.Host(tillerHost))
+	// _, err = helmClient.InstallRelease(tarroot, p.Namespace, helm.ReleaseName(name), helm.ValueOverrides(vals))
+
+	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
+	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, nil, nil, &ResourcesHelmRelease{Namespace: p.Namespace, Name: p.Name}}
 	return &instance, nil
 }
 
@@ -101,6 +122,8 @@ func (a ByOrder) Less(i, j int) bool {
 }
 
 func (p ProvisionNewClusterObjects) Provision(kube Kube, id string) (*Instance, error) {
+
+	// TODO consider checking whether a service with the given name exists in the namespace
 
 	const dataKey = "embedded-resource"
 
@@ -203,7 +226,7 @@ func (p ProvisionNewClusterObjects) Provision(kube Kube, id string) (*Instance, 
 	}
 
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
-	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo}
+	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo, nil}
 
 	return &instance, nil
 }

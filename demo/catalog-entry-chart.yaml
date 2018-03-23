@@ -15,7 +15,9 @@ data:
         "version":"1",
         "whitelist": ["client-ns"],
         "provisionhelmchart": {
-            "url": "http://nginx-chart-registry.default.svc.cluster.local/charts/trivial-time-service-0.1.0.tgz"
+            "charturl": "http://nginx-chart-registry.default.svc.cluster.local/charts/trivial-time-service-0.1.0.tgz",
+			"namespace":"provider-ns",
+			"name":"trivial-time-service"
         },
         "credentialfromcatalog": {
             "username":"iamtheuser",

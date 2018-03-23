@@ -30,6 +30,7 @@ type Instance struct {
 	CoordinatesClusterURL   *CoordinatesClusterURL   `json:"CoordinatesClusterURL"`
 	ResourcesNoResource     *ResourcesNoResource     `json:"ResourcesNoResource"`
 	ResourcesKubeObjectList *ResourcesKubeObjectList `json:"ResourcesKubeObjectList"`
+	ResourcesHelmRelease    *ResourcesHelmRelease    `json:"ResourcesHelmRelease"`
 }
 
 type Binding struct {
@@ -64,8 +65,13 @@ type ProvisionNewClusterObjects struct {
 }
 
 // Provision the chart specified in the struct below via the registry
+// Chart from ChartURL retrieved and Installed in Namespace
+// Assume there is a service called Name as a result of chart install
+// otherwise would need to discover installed resources and infer coordinates
 type ProvisionHelmChart struct {
-	URL string `json:"url"`
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	ChartURL  string `json:"charturl"`
 }
 
 // Credential lives in a Secret in the broker namespace
@@ -106,6 +112,11 @@ type ResourcesKubeObject struct {
 }
 
 type ResourcesKubeObjectList []ResourcesKubeObject
+
+type ResourcesHelmRelease struct {
+	Namespace string `json:"Namespace"`
+	Name      string `json:"Name"`
+}
 
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
