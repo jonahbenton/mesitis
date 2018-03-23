@@ -49,35 +49,35 @@ func (instance *Instance) Deprovision(kube Kube) error {
 	return nil
 }
 
-func (e *Entry) Provision(kube Kube, namespace string, id string) (*Instance, error) {
+func (e *Entry) Provision(kube Kube, id string) (*Instance, error) {
 	if e.ProvisionExistingClusterService != nil {
-		return e.ProvisionExistingClusterService.Provision(kube, namespace, id)
+		return e.ProvisionExistingClusterService.Provision(kube, id)
 	} else if e.ProvisionNonClusterURL != nil {
-		return e.ProvisionNonClusterURL.Provision(kube, namespace, id)
+		return e.ProvisionNonClusterURL.Provision(kube, id)
 	} else if e.ProvisionNewClusterObjects != nil {
-		return e.ProvisionNewClusterObjects.Provision(kube, namespace, id)
+		return e.ProvisionNewClusterObjects.Provision(kube, id)
 	} else if e.ProvisionHelmChart != nil {
-		return e.ProvisionHelmChart.Provision(kube, namespace, id)
+		return e.ProvisionHelmChart.Provision(kube, id)
 	} else {
 		glog.Errorln("Missing provision type")
 		return nil, errors.New("Failed to provision")
 	}
 }
 
-func (p ProvisionExistingClusterService) Provision(kube Kube, namespace string, id string) (*Instance, error) {
+func (p ProvisionExistingClusterService) Provision(kube Kube, id string) (*Instance, error) {
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
 
 	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
-func (p ProvisionNonClusterURL) Provision(kube Kube, namespace string, id string) (*Instance, error) {
+func (p ProvisionNonClusterURL) Provision(kube Kube, id string) (*Instance, error) {
 	URL := p.URL
 	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
-func (p ProvisionHelmChart) Provision(kube Kube, namespace string, id string) (*Instance, error) {
+func (p ProvisionHelmChart) Provision(kube Kube, id string) (*Instance, error) {
 
 	URL := p.URL
 	destdir := kube.(*RealKube).Tmpdir
@@ -100,14 +100,14 @@ func (a ByOrder) Less(i, j int) bool {
 	return a[i].ObjectMeta.Labels["mesitis/order"] < a[j].ObjectMeta.Labels["mesitis/order"]
 }
 
-func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id string) (*Instance, error) {
+func (p ProvisionNewClusterObjects) Provision(kube Kube, id string) (*Instance, error) {
 
 	const dataKey = "embedded-resource"
 
 	obj := p
 
 	glog.Infof("Attempting to find config maps matching labelselector: %s\n", obj.LabelSelector)
-	list, err := kube.ListConfigMaps(namespace, obj.LabelSelector)
+	list, err := kube.ListConfigMaps(kube.BrokerNamespace(), obj.LabelSelector)
 	if err != nil {
 		// TODO is this an error, or provision anyway?
 		glog.Errorf("Failed to find config maps from which to provision object: %s\n", err)

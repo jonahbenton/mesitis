@@ -15,6 +15,7 @@ import (
 // TODO is it necessary to have these distinct create functions?
 // TODO can't it be just CreateObjectFromJSON?
 type Kube interface {
+	BrokerNamespace() string
 	ListConfigMaps(namespace, labelSelector string) (*v1.ConfigMapList, error)
 	CreatePodFromJSON(string, string) (*v1.Pod, error)
 	CreateServiceFromJSON(string, string) (*v1.Service, error)
@@ -35,7 +36,8 @@ type Kube interface {
 }
 
 type RealKube struct {
-	Tmpdir string
+	Namespace string
+	Tmpdir    string
 }
 
 /////////////////////////////////////////////////////////////////
@@ -71,6 +73,10 @@ func kubeError(err error) {
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
+
+func (k *RealKube) BrokerNamespace() string {
+	return k.Namespace
+}
 
 func (k *RealKube) GetSecret(namespace, name string) (*v1.Secret, error) {
 
@@ -296,14 +302,14 @@ func (k *RealKube) SecretExists(namespace, name string) bool {
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
 
-func LoadCatalogFromConfigMaps(k Kube, namespace string) (*[]Entry, error) {
+func LoadCatalogFromConfigMaps(k Kube) (*[]Entry, error) {
 	var catalog []Entry
 	var err error
 
 	const labelSelector = "mesitis/kind=catalog-entry"
 	const dataKey = "wrapped-resource"
 
-	list, err := k.ListConfigMaps(namespace, labelSelector)
+	list, err := k.ListConfigMaps(k.BrokerNamespace(), labelSelector)
 	if err != nil {
 		glog.Errorf("Failed to find config maps from which to load the catalog: %s", err)
 		return nil, err

@@ -20,10 +20,9 @@ type Controller interface {
 }
 
 type ProductionController struct {
-	Namespace string
-	rwMutex   sync.RWMutex
-	Storage   Storage
-	Kube      Kube
+	rwMutex sync.RWMutex
+	Storage Storage
+	Kube    Kube
 }
 
 type ControllerOptions struct {
@@ -31,16 +30,15 @@ type ControllerOptions struct {
 	StorageRedisAddress  string
 	StorageRedisPassword string
 	StorageRedisDatabase string
-	Name                 string
-	Namespace            string
+	BrokerName           string
+	BrokerNamespace      string
 }
 
-func CreateProductionController(name, namespace string, storage Storage, tmpdir string) Controller {
+func CreateProductionController(brokerName, brokerNamespace string, storage Storage, tmpdir string) Controller {
 
 	return &ProductionController{
-		Namespace: namespace,
-		Kube:      &RealKube{Tmpdir: tmpdir},
-		Storage:   storage,
+		Kube:    &RealKube{Tmpdir: tmpdir, Namespace: brokerNamespace},
+		Storage: storage,
 	}
 }
 
@@ -53,7 +51,7 @@ func (c *ProductionController) Catalog() (*brokerapi.Catalog, error) {
 	var catalog *[]Entry
 	var err error
 
-	if catalog, err = LoadCatalogFromConfigMaps(c.Kube, c.Namespace); err != nil {
+	if catalog, err = LoadCatalogFromConfigMaps(c.Kube); err != nil {
 		glog.Errorf("Failed to load catalog: %s", err)
 		return &brokerapi.Catalog{}, nil
 	}
@@ -117,7 +115,7 @@ func (c *ProductionController) CreateServiceInstance(id string, req *brokerapi.C
 	var catalog *[]Entry
 	var err error
 
-	if catalog, err = LoadCatalogFromConfigMaps(c.Kube, c.Namespace); err != nil {
+	if catalog, err = LoadCatalogFromConfigMaps(c.Kube); err != nil {
 		glog.Errorf("Failed to load catalog: %s", err)
 		return nil, err
 	}
@@ -165,7 +163,7 @@ func (c *ProductionController) CreateServiceInstance(id string, req *brokerapi.C
 
 	var instance *Instance
 
-	instance, err = entry.Provision(c.Kube, c.Namespace, id)
+	instance, err = entry.Provision(c.Kube, id)
 
 	if err != nil {
 		glog.Errorf("Provisioning failed %s: %s", id, err)
@@ -282,7 +280,7 @@ func (c *ProductionController) Bind(instanceID, bindingID string, req *brokerapi
 	//		}
 	//	case CredentialFromClusterSecret:
 	//		name := instance.Entry.CredentialObj.(CredentialFromClusterSecret).SecretName
-	//		secret, err := c.Kube.GetSecret(c.Namespace, name)
+	//		secret, err := c.Kube.GetSecret(, name)
 	//		if err == nil {
 	//			cred = brokerapi.Credential{}
 	//			for key, value := range secret.Data {
