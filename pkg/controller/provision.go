@@ -12,7 +12,7 @@ import (
 )
 
 type Provision interface {
-	Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error)
+	Provision(kube Kube, namespace string, id string) (*Instance, error)
 }
 
 /////////////////////////////////////////////////////////////////
@@ -51,33 +51,33 @@ func (instance *Instance) Deprovision(kube Kube) error {
 
 func (e *Entry) Provision(kube Kube, namespace string, id string) (*Instance, error) {
 	if e.ProvisionExistingClusterService != nil {
-		return e.ProvisionExistingClusterService.Provision(e, id, kube, namespace)
+		return e.ProvisionExistingClusterService.Provision(kube, namespace, id)
 	} else if e.ProvisionNonClusterURL != nil {
-		return e.ProvisionNonClusterURL.Provision(e, id, kube, namespace)
+		return e.ProvisionNonClusterURL.Provision(kube, namespace, id)
 	} else if e.ProvisionNewClusterObjects != nil {
-		return e.ProvisionNewClusterObjects.Provision(e, id, kube, namespace)
+		return e.ProvisionNewClusterObjects.Provision(kube, namespace, id)
 	} else if e.ProvisionHelmChart != nil {
-		return e.ProvisionHelmChart.Provision(e, id, kube, namespace)
+		return e.ProvisionHelmChart.Provision(kube, namespace, id)
 	} else {
 		glog.Errorln("Missing provision type")
 		return nil, errors.New("Failed to provision")
 	}
 }
 
-func (p ProvisionExistingClusterService) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
+func (p ProvisionExistingClusterService) Provision(kube Kube, namespace string, id string) (*Instance, error) {
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
 
-	instance := Instance{*entry, id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil}
+	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
-func (p ProvisionNonClusterURL) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
+func (p ProvisionNonClusterURL) Provision(kube Kube, namespace string, id string) (*Instance, error) {
 	URL := p.URL
-	instance := Instance{*entry, id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil}
+	instance := Instance{id, &CoordinatesExternalURL{URL: URL}, nil, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
-func (p ProvisionHelmChart) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
+func (p ProvisionHelmChart) Provision(kube Kube, namespace string, id string) (*Instance, error) {
 
 	URL := p.URL
 	destdir := kube.(*RealKube).Tmpdir
@@ -87,7 +87,7 @@ func (p ProvisionHelmChart) Provision(entry *Entry, id string, kube Kube, namesp
 	} else {
 		glog.Infof("Chart at URL <%s> download failed <%s>", URL, err)
 	}
-	instance := Instance{*entry, id, &CoordinatesExternalURL{URL: "http://dummy.default.svc.cluster.local"}, nil, &ResourcesNoResource{}, nil}
+	instance := Instance{id, &CoordinatesExternalURL{URL: "http://dummy.default.svc.cluster.local"}, nil, &ResourcesNoResource{}, nil}
 	return &instance, nil
 }
 
@@ -100,11 +100,11 @@ func (a ByOrder) Less(i, j int) bool {
 	return a[i].ObjectMeta.Labels["mesitis/order"] < a[j].ObjectMeta.Labels["mesitis/order"]
 }
 
-func (p ProvisionNewClusterObjects) Provision(entry *Entry, id string, kube Kube, namespace string) (*Instance, error) {
+func (p ProvisionNewClusterObjects) Provision(kube Kube, namespace string, id string) (*Instance, error) {
 
 	const dataKey = "wrapped-resource"
 
-	obj := entry.ProvisionNewClusterObjects
+	obj := p
 
 	glog.Infof("Attempting to find config maps matching labelselector: %s\n", obj.LabelSelector)
 	list, err := kube.ListConfigMaps(namespace, obj.LabelSelector)
@@ -203,7 +203,7 @@ func (p ProvisionNewClusterObjects) Provision(entry *Entry, id string, kube Kube
 	}
 
 	URL := fmt.Sprintf("%s.%s.svc.cluster.local", p.Name, p.Namespace)
-	instance := Instance{*entry, id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo}
+	instance := Instance{id, nil, &CoordinatesClusterURL{URL: URL}, nil, &pcfo}
 
 	return &instance, nil
 }

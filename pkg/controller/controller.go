@@ -248,7 +248,7 @@ func (c *ProductionController) Bind(instanceID, bindingID string, req *brokerapi
 
 	// TODO debug
 	glog.Infof("Retrieved instance to bind:", instance.String())
-	glog.Infof("Retrieved entry from instance:", instance.Entry.String())
+	//glog.Infof("Retrieved entry from instance:", instance.Entry.String())
 
 	var cred brokerapi.Credential
 
