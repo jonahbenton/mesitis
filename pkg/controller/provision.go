@@ -56,6 +56,7 @@ type Provision interface {
 	Provision(kube Kube, id string, entry *Entry) (*Instance, error)
 }
 
+// TODO ugly: should be a function taking entry
 func (e *Entry) Provision(kube Kube, id string) (*Instance, error) {
 	if e.ProvisionExistingClusterService != nil {
 		return e.ProvisionExistingClusterService.Provision(kube, id, e)
@@ -66,8 +67,63 @@ func (e *Entry) Provision(kube Kube, id string) (*Instance, error) {
 	} else if e.ProvisionHelmChart != nil {
 		return e.ProvisionHelmChart.Provision(kube, id, e)
 	} else {
-		glog.Errorln("Missing provision type")
+		glog.Errorln("Unknown provision type")
 		return nil, errors.New("Failed to provision")
+	}
+}
+
+type Credential interface {
+	Credential(kube Kube) (map[string]string, error)
+}
+
+// TODO ugly: make methods on each type
+func (e *Entry) Credential(kube Kube) (map[string]string, error) {
+	if e.CredentialFromCatalog != nil {
+		m := make(map[string]string, 0)
+		m["Username"] = e.CredentialFromCatalog.Username
+		m["Password"] = e.CredentialFromCatalog.Password
+		return m, nil
+	} else if e.CredentialFromClusterSecret != nil {
+		name := e.CredentialFromClusterSecret.SecretName
+		secret, err := kube.GetSecret(kube.BrokerNamespace(), name)
+		if err == nil {
+			m := make(map[string]string, 0)
+			for key, value := range secret.Data {
+				m[key] = string(value)
+			}
+			return m, nil
+		} else {
+			glog.Errorf("Unable to find secret %s for CredentialFromClusterSecret: %s", name, err)
+			return nil, err
+		}
+	} else if e.CredentialNoCredential != nil {
+		return make(map[string]string, 0), nil
+	} else if e.CredentialFromVault != nil {
+		// TODO
+		return make(map[string]string, 0), nil
+	} else {
+		glog.Errorln("Unknown credential type")
+		return nil, errors.New("Failed to generate credential")
+	}
+}
+
+type Coordinates interface {
+	Coordinates() (map[string]string, error)
+}
+
+func (i *Instance) Coordinates() (map[string]string, error) {
+	if i.CoordinatesClusterURL != nil {
+		m := make(map[string]string, 0)
+		m["URL"] = i.CoordinatesClusterURL.URL
+		return m, nil
+	} else if i.CoordinatesExternalURL != nil {
+		m := make(map[string]string, 0)
+		m["URL"] = i.CoordinatesExternalURL.URL
+		return m, nil
+	} else {
+		glog.Errorln("Unknown coordinates type")
+		return nil, errors.New("Failed to generate coordinates")
+
 	}
 }
 

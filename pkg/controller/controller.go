@@ -248,60 +248,29 @@ func (c *ProductionController) Bind(instanceID, bindingID string, req *brokerapi
 	glog.Infof("Retrieved instance to bind:", instance.String())
 	glog.Infof("Retrieved entry from instance:", instance.Entry.String())
 
-	var cred brokerapi.Credential
-
-	// TODO merge maps from coordinates and credentials
-	// first call RetrieveCredential() from the entry. this returns a map[string]string
-	// second use https://github.com/fatih/structs to turn instance.coordinates into map[string]string
-	// third merge the two maps
-	// fourth assign brokerapi.Credential to this map
-
-	cred = brokerapi.Credential{
-		"URL": "TBD",
+	// retrieve credentials as specified in catalog entry
+	creds, err := instance.Entry.Credential(c.Kube)
+	if err != nil {
+		glog.Errorf("Failed to properly retrieve credential, binding %s failed: %s", bindingID, err)
+		return nil, err
 	}
 
-	// TODO coordinates needs to be included in the Credential
-	// TODO needs to support port and protocol, etc
+	// retrieve provisioned coordinates
+	coords, err := instance.Coordinates()
+	if err != nil {
+		glog.Errorf("Failed to properly retrieve coordinates, binding %s failed: %s", bindingID, err)
+		return nil, err
+	}
 
-	//	var URL string
-
-	//	switch instance.CoordinatesObj.(type) {
-	//	case CoordinatesClusterURL:
-	//		URL = instance.CoordinatesObj.(CoordinatesClusterURL).URL
-	//	case CoordinatesExternalURL:
-	//		URL = instance.CoordinatesObj.(CoordinatesExternalURL).URL
-	//	default:
-	//		glog.Errorf("Unrecognized CoordinatesObj type: %s", reflect.TypeOf(instance.CoordinatesObj).String())
-	//	}
-
-	//	// TODO serialization mechanism to not write passwords to logs
-
-	//	switch instance.Entry.CredentialObj.(type) {
-	//	case CredentialFromCatalog:
-	//		cred = brokerapi.Credential{
-	//			"URL":      URL,
-	//			"Username": instance.Entry.CredentialObj.(CredentialFromCatalog).Username,
-	//			"Password": instance.Entry.CredentialObj.(CredentialFromCatalog).Password,
-	//		}
-	//	case CredentialFromClusterSecret:
-	//		name := instance.Entry.CredentialObj.(CredentialFromClusterSecret).SecretName
-	//		secret, err := c.Kube.GetSecret(, name)
-	//		if err == nil {
-	//			cred = brokerapi.Credential{}
-	//			for key, value := range secret.Data {
-	//				cred[key] = value
-	//			}
-	//		} else {
-	//			glog.Errorf("Unable to find secret %s for CredentialFromClusterSecret for binding %s", name, bindingID)
-	//			return nil, err
-	//		}
-	//	case CredentialNoCredential:
-	//		cred = brokerapi.Credential{
-	//			"URL": URL,
-	//		}
-	//	default:
-	//		return nil, errors.New("Unknown credential type.")
-	//	}
+	// merge credentials and coordinates into the brokerapi.Credential map
+	// TODO notice if there is overlap of keys
+	var cred brokerapi.Credential
+	for k, v := range creds {
+		cred[k] = v
+	}
+	for k, v := range coords {
+		cred[k] = v
+	}
 
 	glog.Infof("Creating Binding: %s", bindingID)
 	binding := &Binding{instance, bindingID, cred}

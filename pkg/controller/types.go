@@ -21,6 +21,7 @@ type Entry struct {
 	CredentialFromClusterSecret     *CredentialFromClusterSecret     `json:"CredentialFromClusterSecret"`
 	CredentialFromCatalog           *CredentialFromCatalog           `json:"CredentialFromCatalog"`
 	CredentialFromVault             *CredentialFromVault             `json:"CredentialFromVault"`
+	CredentialNoCredential          *CredentialNoCredential          `json:"CredentialNoCredential"`
 }
 
 type Instance struct {
